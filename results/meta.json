@@ -1,0 +1,11 @@
+{
+  "universe": "S&P 500 + 纳指100（当前成分股）",
+  "n_tickers": 516,
+  "start": "2004-01-02",
+  "end": "2026-10-07",
+  "oos_start": "2019-01-01",
+  "cost_per_side": 0.0005,
+  "max_positions": 10,
+  "baseline_win_rate": 0.5297629899726527,
+  "generated": "2026-10-08 10:10"
+}

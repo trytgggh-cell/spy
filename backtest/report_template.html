@@ -123,6 +123,10 @@ tbody tr.dim td { color: var(--ink-3); }
 .statlist b { font-family: var(--f-data); font-weight: 500; font-variant-numeric: tabular-nums; }
 .sel-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .sel-tag { font: inherit; font-size: 12.5px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--rule); background: var(--surface); color: var(--ink); cursor: pointer; }
+.findings { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: 10px; max-width: 76ch; }
+.findings li { padding-left: 4px; }
+.findings b { font-weight: 700; }
+.findings span { color: var(--ink-2); }
 .method { columns: 2 320px; column-gap: 32px; font-size: 14px; color: var(--ink-2); }
 .method li { margin-bottom: 8px; break-inside: avoid; }
 .method b { color: var(--ink); }
@@ -144,10 +148,15 @@ tbody tr.dim td { color: var(--ink-3); }
 
   <div id="notices" style="display:flex;flex-direction:column;gap:8px"></div>
 
+  <section id="sec-findings" hidden>
+    <div class="sec-head"><h2>结论</h2></div>
+    <ol class="findings" id="findings"></ol>
+  </section>
+
   <section id="sec-recs">
     <div class="sec-head">
       <h2>推荐打法</h2>
-      <p>筛选条件：交易≥200笔、样本外≥50笔；全样本与样本外平均收益都为正；Profit Factor&gt;1.2；胜率比随机入场高5个百分点以上，样本外也高3个百分点以上。按胜率排序。点击卡片查看详情。</p>
+      <p>筛选条件：交易≥200笔、样本外≥50笔；全样本与样本外平均收益都为正；Profit Factor&gt;1.2；胜率比持有期相近的随机入场高5个百分点以上，样本外也高3个百分点以上。按胜率排序。点击卡片查看详情。</p>
     </div>
     <div class="recs" id="recs"></div>
   </section>
@@ -232,6 +241,12 @@ const sv = el("div", { class: "notice" }); sv.append(el("strong", {}, "幸存者
 $("#notices").append(sv);
 $("#maxpos").textContent = meta.max_positions;
 
+// ---------- findings ----------
+if (D.findings && D.findings.length) {
+  $("#sec-findings").hidden = false;
+  for (const [h, t] of D.findings) { const li = el("li"); li.append(el("b", {}, h + " "), el("span", {}, t)); $("#findings").append(li); }
+}
+
 // ---------- recommendations ----------
 function recCard(name) {
   const r = byName[name];
@@ -308,7 +323,7 @@ function drawScatter() {
   const wl = Math.min(x1 - 0.01, Math.max(x0 + 0.06, 0.62)), pl = (1 - wl) / wl;
   if (pl > y0 && pl < y1) svg.append(el("svg:text", { x: X(wl) + 4, y: Y(pl) - 6, class: "lbl" }, "零期望线"));
   svg.append(el("svg:line", { x1: X(base), x2: X(base), y1: m.t, y2: H - m.b, class: "zero" }));
-  svg.append(el("svg:text", { x: X(base) + 4, y: H - m.b - 6, class: "lbl" }, "随机入场"));
+  svg.append(el("svg:text", { x: X(base) + 4, y: H - m.b - 6, class: "lbl" }, "随机入场(5天)"));
   const tip = tipFor(box);
   const surface = css("--surface");
   for (const p of pts) {
@@ -344,13 +359,14 @@ function drawScatter() {
 const COLS = [
   ["strategy", "策略", (r) => r.strategy], ["category", "类别", (r) => r.category],
   ["trades", "交易数", (r) => int(r.trades)], ["win_rate", "胜率", (r) => pct(r.win_rate)],
-  ["oos_win_rate", "样本外胜率", (r) => pct(r.oos_win_rate)], ["avg_ret", "平均每笔", (r) => spct(r.avg_ret)],
+  ["oos_win_rate", "样本外胜率", (r) => pct(r.oos_win_rate)],
+  ["edge_vs_random", "超随机", (r) => r.edge_vs_random == null ? "—" : (r.edge_vs_random > 0 ? "+" : "") + (r.edge_vs_random * 100).toFixed(1) + "pt"], ["avg_ret", "平均每笔", (r) => spct(r.avg_ret)],
   ["oos_avg_ret", "样本外每笔", (r) => spct(r.oos_avg_ret)], ["payoff", "盈亏比", (r) => fx(r.payoff)],
   ["profit_factor", "PF", (r) => fx(r.profit_factor)], ["avg_hold", "持有天数", (r) => fx(r.avg_hold, 1)],
   ["pf_cagr", "组合年化", (r) => spct(r.pf_cagr, 1)], ["pf_max_dd", "最大回撤", (r) => pct(r.pf_max_dd, 1)],
   ["pf_sharpe", "Sharpe", (r) => fx(r.pf_sharpe)], ["flags", "提示", null],
 ];
-const SIGNED = new Set(["avg_ret", "oos_avg_ret", "pf_cagr"]);
+const SIGNED = new Set(["avg_ret", "oos_avg_ret", "pf_cagr", "edge_vs_random"]);
 let sortKey = "win_rate", sortDir = -1, catFilter = "全部";
 const cats = ["全部", ...new Set(rows.map((r) => r.category))];
 for (const c of cats) {
@@ -471,6 +487,7 @@ function drawYearly(r) {
   const W = Math.max(280, box.clientWidth), H = Math.round(Math.min(360, Math.max(240, W * 0.7)));
   const m = { l: 40, r: 8, t: 10, b: 28 };
   const vals = ys.map((y) => y[2]);
+  const yb = r.baseline_wr ?? base;
   const lo = Math.min(0.3, ...vals) - 0.02, hi = Math.max(0.75, ...vals) + 0.02;
   const n = ys.length, band = (W - m.l - m.r) / n;
   const X = (i) => m.l + band * (i + 0.5), Y = (v) => H - m.b - (v - lo) / (hi - lo) * (H - m.t - m.b);
@@ -480,12 +497,12 @@ function drawYearly(r) {
   const every = Math.ceil(n / (W < 420 ? 5 : 9));
   ys.forEach((y, i) => { if (i % every === 0) ax.append(el("svg:text", { x: X(i), y: H - 8, "text-anchor": "middle" }, "'" + String(y[0]).slice(2))); });
   svg.append(g, ax);
-  svg.append(el("svg:line", { x1: m.l, x2: W - m.r, y1: Y(base), y2: Y(base), class: "zero" }));
-  svg.append(el("svg:text", { x: W - m.r, y: Y(base) - 5, "text-anchor": "end", class: "lbl" }, "随机入场 " + pct(base)));
+  svg.append(el("svg:line", { x1: m.l, x2: W - m.r, y1: Y(yb), y2: Y(yb), class: "zero" }));
+  svg.append(el("svg:text", { x: W - m.r, y: Y(yb) - 5, "text-anchor": "end", class: "lbl" }, "随机入场 " + pct(r.baseline_wr ?? base)));
   const tip = tipFor(box), col = css("--s1"), surface = css("--surface");
   ys.forEach((y, i) => {
-    svg.append(el("svg:line", { x1: X(i), x2: X(i), y1: Y(base), y2: Y(y[2]), stroke: col, "stroke-width": 2 }));
-    svg.append(el("svg:circle", { cx: X(i), cy: Y(y[2]), r: 4, fill: y[2] >= base ? col : surface, stroke: col, "stroke-width": 2 }));
+    svg.append(el("svg:line", { x1: X(i), x2: X(i), y1: Y(yb), y2: Y(y[2]), stroke: col, "stroke-width": 2 }));
+    svg.append(el("svg:circle", { cx: X(i), cy: Y(y[2]), r: 4, fill: y[2] >= yb ? col : surface, stroke: col, "stroke-width": 2 }));
     const hit = el("svg:rect", { x: X(i) - band / 2, y: m.t, width: band, height: H - m.t - m.b, fill: "transparent", tabindex: 0 });
     const show = (ev) => { const rr = box.getBoundingClientRect(); tip.show(ev.clientX ? ev.clientX - rr.left : X(i), ev.clientY ? ev.clientY - rr.top : Y(y[2]), (t) => { t.append(el("div", { class: "t" }, y[0] + " 年")); tipRow(t, pct(y[2]), "胜率"); tipRow(t, spct(y[3]), "平均每笔"); tipRow(t, int(y[1]), "交易数"); }); };
     hit.addEventListener("pointermove", show); hit.addEventListener("focus", show);

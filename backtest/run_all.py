@@ -29,8 +29,9 @@ def _pct(v, fmt: str = ".1%") -> str:
     return "—" if v is None or not np.isfinite(v) else format(v, fmt)
 
 
-def flag(row: pd.Series, baseline_wr: float) -> str:
+def flag(row: pd.Series) -> str:
     notes = []
+    baseline_wr = row.get("baseline_wr", np.nan)
     if row.get("trades", 0) < 200:
         notes.append("样本少")
     if row.get("oos_trades", 0) >= 30:
@@ -40,7 +41,7 @@ def flag(row: pd.Series, baseline_wr: float) -> str:
             notes.append("样本外胜率下滑")
     if row.get("avg_ret", 0) <= 0:
         notes.append("负期望")
-    if row.get("win_rate", 0) < baseline_wr + 0.02:
+    if np.isfinite(baseline_wr) and row.get("win_rate", 0) < baseline_wr + 0.02:
         notes.append("不优于随机")
     return "、".join(notes)
 
@@ -66,7 +67,7 @@ def main() -> None:
         names = [t for t in full.tickers if t not in BENCHMARKS]
         stocks = full.subset(names)
         bench = {b: full.close[b] for b in BENCHMARKS if b in full.tickers}
-        meta = {"universe": "S&P 500 + Nasdaq-100 (current members)",
+        meta = {"universe": "S&P 500 + 纳指100（当前成分股）",
                 "n_tickers": len(names)}
     dates = stocks.dates
     meta.update(start=str(dates[0].date()), end=str(dates[-1].date()),
@@ -133,10 +134,21 @@ def main() -> None:
         curves[f"{b} 买入持有"] = eq
 
     board = pd.DataFrame(rows)
-    base = board.loc[board["strategy"].str.startswith("随机入场 | 持有5天"), "win_rate"]
-    base_wr = float(base.iloc[0]) if len(base) else 0.5
-    board["flags"] = board.apply(flag, axis=1, baseline_wr=base_wr)
-    board["edge_vs_random"] = board["win_rate"] - base_wr
+    # Random entries win more often the longer they are held, so compare each
+    # strategy with the random baseline whose holding period is closest.
+    rnd = board[board["strategy"].str.match(r"随机入场 \| 持有\d+天")]
+    base_by_hold = dict(zip(rnd["avg_hold"], rnd["win_rate"]))
+    base_wr = float(rnd.loc[rnd["avg_hold"].idxmin(), "win_rate"]) if len(rnd) else 0.5
+
+    def matched(h):
+        if not base_by_hold or not np.isfinite(h):
+            return np.nan
+        return base_by_hold[min(base_by_hold, key=lambda k: abs(np.log(k) - np.log(max(h, 1))))]
+
+    board["baseline_wr"] = board["avg_hold"].map(matched)
+    board.loc[board["category"] == "基线", "baseline_wr"] = np.nan
+    board["flags"] = board.apply(flag, axis=1)
+    board["edge_vs_random"] = board["win_rate"] - board["baseline_wr"]
     board = board.sort_values("win_rate", ascending=False, na_position="last")
     board.to_csv(RES / "leaderboard.csv", index=False, float_format="%.6g")
     pd.concat(yearly).to_csv(RES / "yearly.csv", index=False, float_format="%.6g")

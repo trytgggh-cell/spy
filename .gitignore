@@ -4,5 +4,3 @@ __pycache__/
 data/
 results/trades/
 report/
-results/*.csv
-results/meta.json
