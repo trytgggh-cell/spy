@@ -96,14 +96,11 @@ def simulate_slots(panel: Panel, trades: pd.DataFrame, max_pos: int = 10,
 
 def momentum_rotation(panel: Panel, lookback: int = 252, skip: int = 21,
                       top_n: int = 10, market_filter: pd.Series | None = None,
-                      cost: float = 0.0005, start_idx: int = 260,
-                      eligible: pd.DataFrame | None = None):
+                      cost: float = 0.0005, start_idx: int = 260):
     """Monthly rotation into the top-N momentum names.
 
     Signal at the last close of each month; trades at the next open.
     market_filter: bool Series (True = risk-on). When False -> hold cash.
-    eligible: optional bool DataFrame (dates x tickers); only True names can be
-    picked on that date (e.g. "already an index member").
     Returns (equity Series, holdings DataFrame with one row per stock-month).
     """
     c = panel.close
@@ -126,8 +123,6 @@ def momentum_rotation(panel: Panel, lookback: int = 252, skip: int = 21,
         m = mom.iloc[s].dropna()
         # require tradable prices at entry
         m = m[o.iloc[e][m.index].notna()]
-        if eligible is not None:
-            m = m[eligible.iloc[s].reindex(m.index, fill_value=False).to_numpy(bool)]
         picks = m.nlargest(top_n).index
         if len(picks) == 0:
             eq.iloc[e : x + 1] = cur
