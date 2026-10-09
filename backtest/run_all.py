@@ -20,6 +20,7 @@ from .indicators import sma
 from .portfolio import momentum_rotation, simulate_slots
 from .signals import Ctx, build_strategies
 from .universe import BENCHMARKS, get_universe
+from . import market
 
 ROOT = Path(__file__).resolve().parent.parent
 RES = ROOT / "results"
@@ -53,13 +54,26 @@ def main() -> None:
     ap.add_argument("--max-pos", type=int, default=10)
     ap.add_argument("--cost", type=float, default=0.0005, help="per side")
     ap.add_argument("--start", default="2004-01-01")
+    ap.add_argument("--universe", choices=["index", "market"], default="index",
+                    help="index: today's S&P 500 + Nasdaq-100; market: every listed US stock, "
+                         "top --top-n by dollar volume at each date (no index membership)")
+    ap.add_argument("--top-n", type=int, default=500)
     args = ap.parse_args()
+    global RES
+    if args.universe == "market":
+        RES = ROOT / "results" / "market"
 
     t0 = time.time()
     if args.synthetic:
         full = synthetic_panel(60, 4000, start="2005-01-03")
         stocks, bench = full, {"SPY": full.close.mean(axis=1)}
         meta = {"universe": "synthetic", "n_tickers": len(full.tickers)}
+    elif args.universe == "market":
+        stocks, uni_mask = market.build_market_panel(args.top_n)
+        idx = load_or_download([], args.start)
+        bench = {b: idx.close[b].reindex(stocks.dates) for b in BENCHMARKS if b in idx.tickers}
+        meta = {"universe": f"全市场当前仍上市的美股，每个时点取成交额前{args.top_n}名（不看指数成分）",
+                "n_tickers": len(stocks.tickers), "top_n": args.top_n}
     else:
         uni = get_universe()
         full = load_or_download(uni["ticker"].tolist() + BENCHMARKS, args.start,
@@ -69,6 +83,8 @@ def main() -> None:
         bench = {b: full.close[b] for b in BENCHMARKS if b in full.tickers}
         meta = {"universe": "S&P 500 + 纳指100（当前成分股）",
                 "n_tickers": len(names)}
+    if args.universe != "market":
+        uni_mask = None
     dates = stocks.dates
     meta.update(start=str(dates[0].date()), end=str(dates[-1].date()),
                 oos_start=str(metrics.OOS_START.date()), cost_per_side=args.cost,
@@ -77,13 +93,15 @@ def main() -> None:
           f"loaded in {time.time() - t0:.0f}s")
 
     ctx = Ctx(stocks)
-    RES.mkdir(exist_ok=True)
+    RES.mkdir(parents=True, exist_ok=True)
     (RES / "trades").mkdir(exist_ok=True)
     rows, yearly, curves = [], [], {}
 
     for s in build_strategies():
         t1 = time.time()
         entry = s.entry(ctx)
+        if uni_mask is not None:
+            entry = entry & uni_mask
         ex = s.exit(ctx) if s.exit else None
         sc = s.score(ctx) if s.score else None
         trades = run_trades(stocks, entry, s.rule, ex,
@@ -111,7 +129,8 @@ def main() -> None:
         name = (f"动量轮动 {lb // 21}个月动量 Top{top}"
                 + (" + SPY>200日均线过滤" if filt else ""))
         eq, hold = momentum_rotation(stocks, lb, skip, top,
-                                     spy_filter if filt else None, args.cost)
+                                     spy_filter if filt else None, args.cost,
+                                     eligible=uni_mask)
         st = metrics.full_stats(hold, eq)
         desc = (f"每月末按过去{lb // 21}个月涨幅(剔除最近{skip}天)选最强{top}只，次日开盘等权买入，"
                 f"持有一个月" + ("；SPY低于200日均线时空仓" if filt else "") + "。")

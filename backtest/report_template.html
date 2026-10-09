@@ -172,6 +172,7 @@ tbody tr.dim td { color: var(--ink-3); }
   <header>
     <h1>美股打法胜率榜</h1>
     <p class="lede" id="lede"></p>
+    <div class="filters" id="univ-toggle" hidden></div>
     <div class="meta" id="meta"></div>
   </header>
 
@@ -248,7 +249,8 @@ tbody tr.dim td { color: var(--ink-3); }
 </div>
 
 <script>
-const D = /*__DATA__*/null;
+const DATA = /*__DATA__*/null;
+let D = DATA.index;
 const $ = (s) => document.querySelector(s);
 const NS = "http://www.w3.org/2000/svg";
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -262,14 +264,20 @@ const el = (tag, attrs = {}, text) => {
   if (text != null) e.textContent = text;
   return e;
 };
-const meta = D.meta, base = meta.baseline_win_rate;
-const rows = D.rows;
-const byName = Object.fromEntries(rows.map((r) => [r.strategy, r]));
+let meta, base, rows, byName;
+function useUniverse(key) {
+  D = DATA[key]; meta = D.meta; base = meta.baseline_win_rate; rows = D.rows;
+  byName = Object.fromEntries(rows.map((r) => [r.strategy, r]));
+}
+let universeKey = DATA.market ? "market" : "index";
+useUniverse(universeKey);
 const CAT_COLOR = { "均值回归": "--s1", "趋势突破": "--s2", "形态事件": "--s3" };
 const catColor = (c) => css(CAT_COLOR[c] || "--s-other");
 const SEL_COLORS = ["--s1", "--s2", "--s3"];
 
 // ---------- header ----------
+function renderHeader() {
+$("#meta").replaceChildren(); $("#notices").replaceChildren();
 $("#lede").textContent = `在 ${meta.universe} 共 ${meta.n_tickers} 只股票上，回测 ${rows.filter(r => r.trades).length} 个打法，找出胜率高且长期真正赚钱的规则。`;
 const metaItems = [["区间", `${meta.start} → ${meta.end}`], ["样本外起点", meta.oos_start], ["单边成本", (meta.cost_per_side * 1e4).toFixed(0) + " bp"], ["随机入场胜率", pct(base)], ["生成时间", meta.generated]];
 for (const [k, v] of metaItems) { const s = el("span", {}, k + " "); s.append(el("b", {}, v)); $("#meta").append(s); }
@@ -277,14 +285,17 @@ if (meta.universe === "synthetic") {
   const n = el("div", { class: "notice warn" }); n.append(el("strong", {}, "示例数据。"), document.createTextNode(" 当前页面用随机生成的价格做演示，数字没有任何投资含义。接入真实行情后重新生成即可。"));
   $("#notices").append(n);
 }
-const sv = el("div", { class: "notice" }); sv.append(el("strong", {}, "幸存者偏差："), document.createTextNode(" 股票池是今天的成分股，过去被剔除或退市的公司不在里面，所以历史收益会被高估。比较策略之间的相对优劣、以及和随机入场基线的差距，比看绝对收益更可靠。"));
+const sv = el("div", { class: "notice" }); sv.append(el("strong", {}, "幸存者偏差："), document.createTextNode(" " + (D.bias_note || "股票池是今天的成分股，过去被剔除或退市的公司不在里面，所以历史收益会被高估。比较策略之间的相对优劣、以及和随机入场基线的差距，比看绝对收益更可靠。")));
 $("#notices").append(sv);
 $("#maxpos").textContent = meta.max_positions;
+}
 
 // ---------- findings ----------
-if (D.findings && D.findings.length) {
-  $("#sec-findings").hidden = false;
-  for (const [h, t] of D.findings) { const li = el("li"); li.append(el("b", {}, h + " "), el("span", {}, t)); $("#findings").append(li); }
+function renderFindings() {
+  $("#findings").replaceChildren();
+  const has = D.findings && D.findings.length;
+  $("#sec-findings").hidden = !has;
+  if (has) for (const [h, t] of D.findings) { const li = el("li"); li.append(el("b", {}, h + " "), el("span", {}, t)); $("#findings").append(li); }
 }
 
 // ---------- $10,000 cards ----------
@@ -340,6 +351,8 @@ function waffle(r) {
   return w;
 }
 function renderHodl() {
+  $("#sec-hodl").hidden = !(D.curated && D.curated.length);
+  $("#hodl-bias").replaceChildren(el("strong", {}, "先看这一条："), document.createTextNode(" " + (D.hodl_note || "这些是回测，股票池只含今天的成分股，过去被淘汰的公司不在里面。越依赖少数大赢家的打法（金叉、52 周新高、动量）被高估得越多，尤其是动量。")));
   const host = $("#hodl"); host.replaceChildren();
   const oos = hodlRange === "2019", P = oos ? "pf_oos_" : "pf_";
   const i0 = oos ? Math.max(0, D.dates.findIndex((d) => d >= meta.oos_start)) : 0;
@@ -384,13 +397,11 @@ function renderHodl() {
   }
 }
 (function initHodl() {
-  if (!(D.curated && D.curated.length)) { $("#sec-hodl").hidden = true; return; }
   for (const [k, label] of [["2004", "从 2004 年起投"], ["2019", "从 2019 年起投"]]) {
     const b = el("button", { class: "chip", type: "button", "aria-pressed": String(k === hodlRange) }, label);
     b.addEventListener("click", () => { hodlRange = k; document.querySelectorAll("#hodl-range .chip").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderHodl(); });
     $("#hodl-range").append(b);
   }
-  $("#hodl-bias").append(el("strong", {}, "先看这一条："), document.createTextNode(" 这些是回测，股票池只含今天的成分股，过去被淘汰的公司不在里面。越依赖少数大赢家的打法（金叉、52 周新高、动量）被高估得越多，尤其是动量。"));
   const lg = $("#hodl-legend");
   for (const [cls, label] of [["w", "赢"], ["", "输"], ["b", "涨超 50% 的大赚"]]) {
     const s = el("span"); s.append(el("i", { class: "sq " + cls }), document.createTextNode(label)); lg.append(s);
@@ -410,8 +421,11 @@ function recCard(name) {
   b.addEventListener("click", () => { selectOnly(name); $("#detail").scrollIntoView({ behavior: "smooth" }); });
   return b;
 }
-if (D.recommended.length) D.recommended.forEach((n) => $("#recs").append(recCard(n)));
-else $("#recs").append(el("div", { class: "empty" }, "没有策略同时满足全部条件。可以在排行榜里按样本外胜率排序，看哪些接近门槛。"));
+function renderRecs() {
+  $("#recs").replaceChildren();
+  if (D.recommended.length) D.recommended.forEach((n) => $("#recs").append(recCard(n)));
+  else $("#recs").append(el("div", { class: "empty" }, "没有策略同时满足全部条件。可以在排行榜里按样本外胜率排序，看哪些接近门槛。"));
+}
 
 // ---------- tooltip helper ----------
 function tipFor(container) {
@@ -663,6 +677,8 @@ function drawYearly(r) {
 }
 
 // ---------- method ----------
+function renderMethod() {
+$("#method").replaceChildren();
 const notes = [
   ["成交规则", "信号用当天收盘价计算，第二天开盘价买入；出场信号同样在收盘确认、次日开盘卖出，不使用未来数据。"],
   ["止损", "止损和追踪止损在盘中触发，按止损价成交；如果开盘直接跳空穿过止损价，按更差的开盘价成交。"],
@@ -671,13 +687,30 @@ const notes = [
   ["组合模拟", `最多同时持有 ${meta.max_positions} 只，每只用当时净值的 1/${meta.max_positions} 买入；信号多于空位时，优先选超卖最深（或信号最强）的股票。`],
   ["样本内/外", `${meta.start} 至 ${meta.oos_start} 前为样本内，之后为样本外。规则在样本外依然有效，才说明不是巧合。`],
   ["随机基线", "随机挑股票买入并持有固定天数。美股长期上涨，随便买的胜率本身就超过 50%，好的打法必须明显高于这条线。"],
-  ["流动性过滤", "只交易股价 ≥ $5 且 20 日平均成交额 ≥ 1000 万美元的股票。"],
-  ["局限", "使用当前成分股（幸存者偏差）；未计入做空、杠杆、分红再投资之外的现金利息；历史表现不代表未来。"],
+  ["流动性过滤", meta.top_n ? `股票池不看指数成分：每个交易日，在全部当前仍上市的美股里，取股价 ≥ $5 且 20 日平均成交额排名前 ${meta.top_n} 的股票，入选前也能买。` : "只交易股价 ≥ $5 且 20 日平均成交额 ≥ 1000 万美元的股票。"],
+  ["局限", D.limit_note || "使用当前成分股（幸存者偏差）；未计入做空、杠杆、分红再投资之外的现金利息；历史表现不代表未来。"],
 ];
 for (const [k, v] of notes) { const li = el("li"); li.append(el("b", {}, k + "："), document.createTextNode(v)); $("#method").append(li); }
+}
 
 function refresh() { drawScatter(); drawTable(); drawDetail(); renderHodl(); }
-selected = [D.recommended[0] || rows.find((r) => r.trades)?.strategy];
+function renderStatic() { renderHeader(); renderFindings(); renderRecs(); renderMethod(); }
+function defaultSelection() { return [D.recommended[0] || rows.find((r) => r.trades)?.strategy]; }
+(function initUniverseToggle() {
+  if (!DATA.market) return;
+  const box = $("#univ-toggle"); box.hidden = false;
+  for (const [k, label] of [["market", "股票池：全市场成交额前 500（不看指数）"], ["index", "股票池：今天的 S&P 500 + 纳指 100"]]) {
+    const b = el("button", { class: "chip", type: "button", "aria-pressed": String(k === universeKey) }, label);
+    b.addEventListener("click", () => {
+      universeKey = k; useUniverse(k);
+      box.querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      renderStatic(); selected = defaultSelection(); refresh();
+    });
+    box.append(b);
+  }
+})();
+renderStatic();
+selected = defaultSelection();
 refresh();
 let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawScatter(); drawEquity(); drawYearly(byName[selected[selected.length - 1]]); }, 150); });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refresh);

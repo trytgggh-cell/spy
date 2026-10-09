@@ -65,11 +65,13 @@ def _clean(v):
     return v
 
 
-def build() -> Path:
-    board = pd.read_csv(RES / "leaderboard.csv")
-    meta = json.loads((RES / "meta.json").read_text())
-    yearly = pd.read_csv(RES / "yearly.csv")
-    eq = pd.read_csv(RES / "equity_weekly.csv", index_col=0, parse_dates=True)
+def build_data(res: Path) -> dict | None:
+    if not (res / "leaderboard.csv").exists():
+        return None
+    board = pd.read_csv(res / "leaderboard.csv")
+    meta = json.loads((res / "meta.json").read_text())
+    yearly = pd.read_csv(res / "yearly.csv")
+    eq = pd.read_csv(res / "equity_weekly.csv", index_col=0, parse_dates=True)
 
     for c in COLS:
         if c not in board:
@@ -84,7 +86,10 @@ def build() -> Path:
 
     eq = eq.ffill()
     curves = {c: [_clean(round(v, 4)) for v in eq[c].to_numpy()] for c in eq.columns}
-    data = {
+    extra = {}
+    if (res / "notes.json").exists():
+        extra = json.loads((res / "notes.json").read_text(encoding="utf-8"))
+    return {
         "meta": meta,
         "rows": rows,
         "yearly": yd,
@@ -93,9 +98,14 @@ def build() -> Path:
         "recommended": pick_recommendations(board),
         "curated": [{"group": g, "name": n, "note": note} for g, n, note in CURATED
                     if n in set(board["strategy"])],
-        "findings": (json.loads((RES / "findings.json").read_text(encoding="utf-8"))
-                     if (RES / "findings.json").exists() else []),
+        "findings": (json.loads((res / "findings.json").read_text(encoding="utf-8"))
+                     if (res / "findings.json").exists() else []),
+        **extra,
     }
+
+
+def build() -> Path:
+    data = {"index": build_data(RES), "market": build_data(RES / "market")}
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "/*__DATA__*/null", json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     )
