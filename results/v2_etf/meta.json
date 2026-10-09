@@ -1,0 +1,12 @@
+{
+  "universe": "24只ETF（股票、行业、债券、商品）",
+  "n_tickers": 24,
+  "start": "2003-06-02",
+  "end": "2026-10-08",
+  "oos_start": "2015-01-01",
+  "cost_per_side": 0.0005,
+  "max_positions": 5,
+  "top_n": null,
+  "baseline_win_rate": 0.5,
+  "generated": "2026-10-09 10:18"
+}

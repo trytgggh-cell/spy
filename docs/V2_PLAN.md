@@ -32,7 +32,7 @@
 | B2 12-1 月动量 | 过去 12 个月涨幅（剔除最近 21 天），U 内取前 N，**加大盘开关** | N=30 / 50 |
 | B3 低波动 | 60 日波动率最低，U 内取前 N，不加大盘开关 | N=30 / 50 |
 
-## C. ETF 篮子（23 只：SPY QQQ IWM MDY EFA EEM VNQ；XLK XLF XLE XLV XLY XLP XLI XLU XLB；TLT IEF LQD HYG；GLD SLV DBC USO）
+## C. ETF 篮子（24 只：SPY QQQ IWM MDY EFA EEM VNQ；XLK XLF XLE XLV XLY XLP XLI XLU XLB；TLT IEF LQD HYG；GLD SLV DBC USO）
 | 编号 | 规则 |
 |---|---|
 | C1 SPY 200 日线择时 | SPY 收盘>200 日均线持有，否则现金 |
