@@ -22,7 +22,25 @@ COLS = ["strategy", "category", "description", "trades", "win_rate", "avg_ret",
         "oos_trades", "oos_win_rate", "oos_avg_ret", "oos_profit_factor",
         "years_positive", "yearly_win_rate_min", "pf_cagr", "pf_sharpe",
         "pf_max_dd", "pf_oos_cagr", "pf_oos_max_dd", "flags", "baseline_wr",
-        "edge_vs_random"]
+        "edge_vs_random", "big_win_rate", "best", "top5_share",
+        "pf_final", "pf_worst_year", "pf_worst_year_n", "pf_losing_years", "pf_n_years",
+        "pf_oos_final", "pf_oos_worst_year", "pf_oos_worst_year_n",
+        "pf_oos_losing_years", "pf_oos_n_years"]
+
+# Strategies shown as "what happens to $10,000" cards: (group, name, note)
+BIAS = "股票池只含今天的成分股，这个数字明显偏高，不是真实可得的收益。"
+CURATED = [
+    ("对照", "SPY 买入持有", ""),
+    ("对照", "QQQ 买入持有", ""),
+    ("高胜率", "5日内从高点回撤>8% 上升趋势 | 收盘>SMA5出场", ""),
+    ("高胜率", "RSI2<5 上升趋势 | 收盘>SMA5出场 | 最长10天", ""),
+    ("高胜率", "跌破布林下轨 上升趋势 | 回到中轨出场", ""),
+    ("大赚型", "50/200均线金叉 | 死叉出场", "依赖少数大赢家，受今天成分股的偏差影响。"),
+    ("大赚型", "55日新高 | 6ATR追踪止损", ""),
+    ("大赚型", "52周新高 | 8ATR追踪止损", "依赖少数大赢家，受今天成分股的偏差影响。"),
+    ("大赚型", "20日新高突破(海龟) | 3ATR追踪止损", "止损太紧，大赚的机会被提前止损掉了。"),
+    ("动量", "动量轮动 12个月动量 Top10", BIAS),
+]
 
 
 def pick_recommendations(board: pd.DataFrame, k: int = 5) -> list[str]:
@@ -73,6 +91,8 @@ def build() -> Path:
         "dates": [d.strftime("%Y-%m-%d") for d in eq.index],
         "curves": curves,
         "recommended": pick_recommendations(board),
+        "curated": [{"group": g, "name": n, "note": note} for g, n, note in CURATED
+                    if n in set(board["strategy"])],
         "findings": (json.loads((RES / "findings.json").read_text(encoding="utf-8"))
                      if (RES / "findings.json").exists() else []),
     }

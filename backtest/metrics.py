@@ -19,6 +19,8 @@ def trade_stats(trades: pd.DataFrame, prefix: str = "") -> dict:
     avg_loss = losses.mean() if len(losses) else 0.0
     gross_loss = -losses.sum()
     sd = r.std(ddof=1) if n > 1 else np.nan
+    srt = np.sort(r)[::-1]
+    k5 = max(1, int(n * 0.05))
     return {
         f"{prefix}trades": n,
         f"{prefix}win_rate": len(wins) / n,
@@ -31,6 +33,9 @@ def trade_stats(trades: pd.DataFrame, prefix: str = "") -> dict:
         f"{prefix}worst": r.min(),
         f"{prefix}t_stat": r.mean() / (sd / math.sqrt(n)) if n > 1 and sd > 0 else np.nan,
         f"{prefix}avg_hold": trades["hold"].mean(),
+        f"{prefix}big_win_rate": float((r > 0.5).mean()),   # share of trades > +50%
+        f"{prefix}best": float(r.max()),
+        f"{prefix}top5_share": float(srt[:k5].sum() / r.sum()) if r.sum() > 0 else np.nan,
     }
 
 
@@ -55,7 +60,18 @@ def equity_stats(eq: pd.Series, prefix: str = "pf_") -> dict:
     cagr = (eq.iloc[-1] / eq.iloc[0]) ** (1 / years) - 1 if years > 0 else np.nan
     dd = eq / eq.cummax() - 1
     sharpe = dr.mean() / dr.std() * math.sqrt(252) if dr.std() > 0 else np.nan
+    # calendar-year returns (first year measured from the first observation)
+    ye = eq.resample("YE").last()
+    prev = ye.shift(1)
+    prev.iloc[0] = eq.iloc[0]
+    yr = ye / prev - 1
     return {
+        f"{prefix}final": eq.iloc[-1] / eq.iloc[0],
+        f"{prefix}worst_year": yr.min(),
+        f"{prefix}worst_year_n": int(yr.idxmin().year),
+        f"{prefix}best_year": yr.max(),
+        f"{prefix}losing_years": int((yr < 0).sum()),
+        f"{prefix}n_years": int(len(yr)),
         f"{prefix}cagr": cagr,
         f"{prefix}sharpe": sharpe,
         f"{prefix}max_dd": dd.min(),

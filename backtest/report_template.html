@@ -16,7 +16,7 @@
   --accent-wash: #e3edf9;
   --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s-other: #9a9f9b;
   --good: #0f7a0f; --bad: #c03434; --warn: #9a6400;
-  --good-wash: #e2f2e0; --bad-wash: #f9e3e1; --warn-wash: #fbf0d6;
+  --good-wash: #e2f2e0; --bad-wash: #f9e3e1; --warn-wash: #fbf0d6; --loss: #c5cac6;
   --f-display: "Noto Serif SC", "Songti SC", "STSong", serif;
   --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --f-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -27,7 +27,7 @@
     --rule: #333836; --rule-2: #262a28; --accent: #6da7ec; --accent-wash: #1b2a3d;
     --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s-other: #6f7571;
     --good: #5cc65c; --bad: #ef7c7c; --warn: #e3b24a;
-    --good-wash: #1b2e1b; --bad-wash: #3a1f1f; --warn-wash: #3a2f15;
+    --good-wash: #1b2e1b; --bad-wash: #3a1f1f; --warn-wash: #3a2f15; --loss: #454b48;
     color-scheme: dark;
   }
 }
@@ -36,7 +36,7 @@
   --rule: #333836; --rule-2: #262a28; --accent: #6da7ec; --accent-wash: #1b2a3d;
   --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s-other: #6f7571;
   --good: #5cc65c; --bad: #ef7c7c; --warn: #e3b24a;
-  --good-wash: #1b2e1b; --bad-wash: #3a1f1f; --warn-wash: #3a2f15;
+  --good-wash: #1b2e1b; --bad-wash: #3a1f1f; --warn-wash: #3a2f15; --loss: #454b48;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -115,6 +115,35 @@ tbody tr.dim td { color: var(--ink-3); }
 .pill.ok { background: var(--good-wash); color: var(--good); }
 .swatch { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 
+/* $10,000 cards */
+.hodl-group { display: flex; flex-direction: column; gap: 10px; }
+.hodl-group > p { color: var(--ink-2); font-size: 13.5px; }
+.hodl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; }
+.hodl-grid.four { grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr)); }
+.hcard { gap: 12px; }
+.hcard h3 { font-size: 14px; line-height: 1.4; }
+.hcard .top { display: flex; flex-direction: column; gap: 6px; }
+.hcard .big { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 28px; font-weight: 500; line-height: 1.1; }
+.hcard .sub { font-size: 12.5px; color: var(--ink-2); display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.hcard .sub b { font-family: var(--f-data); font-weight: 500; color: var(--ink); }
+.hcard .chart svg { height: 84px; }
+.waffle-row { display: flex; gap: 14px; align-items: flex-start; }
+.waffle { display: grid; grid-template-columns: repeat(10, 9px); gap: 2px; flex: none; }
+.waffle i { display: block; width: 9px; height: 9px; border-radius: 2px; background: var(--loss); }
+.waffle i.w { background: var(--s1); }
+.waffle i.b { background: var(--s2); }
+.waffle-txt { font-size: 12.5px; color: var(--ink-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.waffle-txt b { font-family: var(--f-data); font-weight: 500; color: var(--ink); }
+.waffle-txt .head { color: var(--ink-3); font-size: 12px; }
+.mini { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; border-top: 1px solid var(--rule-2); padding-top: 10px; }
+.mini div { display: flex; flex-direction: column; }
+.mini span { font-size: 11.5px; color: var(--ink-3); }
+.mini b { font-family: var(--f-data); font-weight: 500; font-size: 14px; font-variant-numeric: tabular-nums; }
+.hcard .note { font-size: 12px; background: var(--warn-wash); color: var(--warn); border-radius: 6px; padding: 6px 8px; }
+.legend i.sq { border-radius: 2px; background: var(--loss); }
+.legend i.sq.w { background: var(--s1); }
+.legend i.sq.b { background: var(--s2); }
+
 /* detail */
 .detail-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; }
 .statlist { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 16px; }
@@ -151,6 +180,17 @@ tbody tr.dim td { color: var(--ink-3); }
   <section id="sec-findings" hidden>
     <div class="sec-head"><h2>结论</h2></div>
     <ol class="findings" id="findings"></ol>
+  </section>
+
+  <section id="sec-hodl">
+    <div class="sec-head">
+      <h2>投 10,000 美元会怎样</h2>
+      <p>每张卡片是一个打法：每次最多同时持有 10 只，满仓等权，已扣成本。曲线是账户价值（对数刻度），虚线是同期 SPY。下方的 100 个方块代表“每 100 笔交易”。</p>
+    </div>
+    <div class="filters" id="hodl-range"></div>
+    <div class="notice warn" id="hodl-bias"></div>
+    <div class="legend" id="hodl-legend"></div>
+    <div id="hodl"></div>
   </section>
 
   <section id="sec-recs">
@@ -246,6 +286,116 @@ if (D.findings && D.findings.length) {
   $("#sec-findings").hidden = false;
   for (const [h, t] of D.findings) { const li = el("li"); li.append(el("b", {}, h + " "), el("span", {}, t)); $("#findings").append(li); }
 }
+
+// ---------- $10,000 cards ----------
+const HODL_GROUPS = [
+  ["对照", "对照：直接买入持有", "不做任何交易，作为参照。"],
+  ["高胜率", "高胜率：在上升趋势里买短线急跌", "赢的次数多，但每笔赚得少，亏起来比赚得多。账户波动小。"],
+  ["大赚型", "大赚型：趋势突破 + 宽止损", "一半以上的交易是亏的，靠少数涨几倍的交易赚钱。持有几个月。"],
+  ["动量", "动量轮动：每月换成过去涨得最猛的 10 只", "每月换仓一次。"],
+];
+const HODL_COLOR = { "对照": "--ink-2", "高胜率": "--s1", "大赚型": "--s2", "动量": "--s3" };
+let hodlRange = "2004";
+const money = (v) => "$" + Math.round(v).toLocaleString("en-US");
+const fmtBig = (rate) => {
+  if (rate == null) return "—";
+  if (rate * 100 >= 1) return (rate * 100).toFixed(rate * 100 < 10 ? 1 : 0) + " 笔";
+  const k = Math.round(rate * 1000);
+  return k >= 1 ? "每 1000 笔约 " + k + " 笔" : "几乎没有";
+};
+function sparkline(box, name, color, i0) {
+  const dates = D.dates, base = D.curves[name], spy = D.curves["SPY 买入持有"];
+  const ser = (c) => { const b = c[i0]; return c.map((v) => v == null || b == null ? null : v / b * 10000); };
+  const a = ser(base), s = name === "SPY 买入持有" ? null : ser(spy);
+  const vals = [...a.slice(i0), ...(s ? s.slice(i0) : [])].filter((v) => v != null && v > 0);
+  const lo = Math.min(...vals, 10000) / 1.15, hi = Math.max(...vals) * 1.15;
+  const W = 300, H = 84, m = { l: 4, r: 8, t: 6, b: 6 }, n = dates.length;
+  const X = (i) => m.l + (i - i0) / (n - 1 - i0) * (W - m.l - m.r);
+  const Y = (v) => H - m.b - (Math.log(v) - Math.log(lo)) / (Math.log(hi) - Math.log(lo)) * (H - m.t - m.b);
+  const svg = el("svg:svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": name + " 账户价值曲线", preserveAspectRatio: "none" });
+  svg.append(el("svg:line", { x1: m.l, x2: W - m.r, y1: Y(10000), y2: Y(10000), class: "zero", "vector-effect": "non-scaling-stroke" }));
+  const path = (arr) => { let d = ""; for (let i = i0; i < n; i++) { const v = arr[i]; if (v == null || v <= 0) continue; d += (d ? "L" : "M") + X(i).toFixed(1) + "," + Y(v).toFixed(1); } return d; };
+  if (s) svg.append(el("svg:path", { d: path(s), fill: "none", stroke: css("--ink-3"), "stroke-width": 1.25, "stroke-dasharray": "4 3", "vector-effect": "non-scaling-stroke" }));
+  svg.append(el("svg:path", { d: path(a), fill: "none", stroke: css(color), "stroke-width": 2, "stroke-linejoin": "round", "vector-effect": "non-scaling-stroke" }));
+  const cross = el("svg:line", { y1: m.t, y2: H - m.b, stroke: css("--ink-3"), "stroke-width": 1, visibility: "hidden", "vector-effect": "non-scaling-stroke" });
+  svg.append(cross);
+  box.append(svg);
+  const tip = tipFor(box);
+  svg.addEventListener("pointermove", (ev) => {
+    const r = svg.getBoundingClientRect();
+    const i = Math.max(i0, Math.min(n - 1, Math.round(i0 + (ev.clientX - r.left) / r.width * (n - 1 - i0))));
+    cross.setAttribute("x1", X(i)); cross.setAttribute("x2", X(i)); cross.setAttribute("visibility", "visible");
+    tip.show(ev.clientX - r.left, ev.clientY - r.top, (t) => {
+      t.append(el("div", { class: "t" }, dates[i]));
+      if (a[i] != null) tipRow(t, money(a[i]), name.length > 16 ? name.slice(0, 16) + "…" : name, css(color));
+      if (s && s[i] != null) tipRow(t, money(s[i]), "SPY 买入持有", css("--ink-3"));
+    });
+  });
+  svg.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); tip.hide(); });
+}
+function waffle(r) {
+  const wins = Math.round(r.win_rate * 100), big = Math.min(wins, Math.round((r.big_win_rate || 0) * 100));
+  const w = el("div", { class: "waffle", role: "img", "aria-label": `每100笔：赢${wins}笔，输${100 - wins}笔，涨超50%的${big}笔` });
+  for (let i = 0; i < 100; i++) w.append(el("i", { class: i < big ? "b" : i < wins ? "w" : "" }));
+  return w;
+}
+function renderHodl() {
+  const host = $("#hodl"); host.replaceChildren();
+  const oos = hodlRange === "2019", P = oos ? "pf_oos_" : "pf_";
+  const i0 = oos ? Math.max(0, D.dates.findIndex((d) => d >= meta.oos_start)) : 0;
+  const spyFinal = byName["SPY 买入持有"]?.[P + "final"];
+  for (const [key, title, desc] of HODL_GROUPS) {
+    const items = (D.curated || []).filter((c) => c.group === key);
+    if (!items.length) continue;
+    const g = el("div", { class: "hodl-group" }); g.append(el("h3", {}, title), el("p", {}, desc));
+    const grid = el("div", { class: "hodl-grid" + (items.length === 4 ? " four" : "") });
+    for (const c of items) {
+      const r = byName[c.name]; if (!r || r[P + "final"] == null) continue;
+      const card = el("div", { class: "card hcard" });
+      const top = el("div", { class: "top" });
+      top.append(el("h3", {}, c.name));
+      top.append(el("div", { class: "big" }, money(10000 * r[P + "final"])));
+      const sub = el("div", { class: "sub" });
+      const s1 = el("span"); s1.append(document.createTextNode("年化 "), el("b", {}, pct(r[P + "cagr"], 1))); sub.append(s1);
+      if (key !== "对照" && spyFinal) { const s2 = el("span"); const x = r[P + "final"] / spyFinal; s2.append(document.createTextNode("SPY 的 "), el("b", {}, x.toFixed(x < 10 ? 1 : 0) + " 倍")); sub.append(s2); }
+      top.append(sub); card.append(top);
+      const ch = el("div", { class: "chart" }); card.append(ch);
+      sparkline(ch, c.name, HODL_COLOR[key], i0);
+      if (r.trades) {
+        const row = el("div", { class: "waffle-row" }); row.append(waffle(r));
+        const t = el("div", { class: "waffle-txt" });
+        t.append(el("div", { class: "head" }, "每 100 笔交易（全区间）"));
+        const l1 = el("div"); l1.append(document.createTextNode("赢 "), el("b", {}, Math.round(r.win_rate * 100)), document.createTextNode(" 笔，平均 "), el("b", {}, spct(r.avg_win, 1))); t.append(l1);
+        const l2 = el("div"); l2.append(document.createTextNode("输 "), el("b", {}, 100 - Math.round(r.win_rate * 100)), document.createTextNode(" 笔，平均 "), el("b", {}, spct(r.avg_loss, 1))); t.append(l2);
+        const l3 = el("div"); l3.append(document.createTextNode("涨超 50%："), el("b", {}, fmtBig(r.big_win_rate))); t.append(l3);
+        const l4 = el("div"); l4.append(document.createTextNode("持有 "), el("b", {}, fx(r.avg_hold, 0) + " 天"), document.createTextNode("，最大一笔 "), el("b", {}, spct(r.best, 0))); t.append(l4);
+        row.append(t); card.append(row);
+      }
+      const mini = el("div", { class: "mini" });
+      const yrs = r[P + "n_years"];
+      for (const [k, v] of [["最惨时缩水", pct(r[P + "max_dd"], 0)], ["最差一年", spct(r[P + "worst_year"], 0) + "（" + r[P + "worst_year_n"] + "）"], ["亏钱的年份", r[P + "losing_years"] + " / " + yrs]]) {
+        const d = el("div"); d.append(el("span", {}, k), el("b", {}, v)); mini.append(d);
+      }
+      card.append(mini);
+      if (c.note) card.append(el("div", { class: "note" }, c.note));
+      grid.append(card);
+    }
+    g.append(grid); host.append(g);
+  }
+}
+(function initHodl() {
+  if (!(D.curated && D.curated.length)) { $("#sec-hodl").hidden = true; return; }
+  for (const [k, label] of [["2004", "从 2004 年起投"], ["2019", "从 2019 年起投"]]) {
+    const b = el("button", { class: "chip", type: "button", "aria-pressed": String(k === hodlRange) }, label);
+    b.addEventListener("click", () => { hodlRange = k; document.querySelectorAll("#hodl-range .chip").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); renderHodl(); });
+    $("#hodl-range").append(b);
+  }
+  $("#hodl-bias").append(el("strong", {}, "先看这一条："), document.createTextNode(" 这些是回测，股票池只含今天的成分股，过去被淘汰的公司不在里面。越依赖少数大赢家的打法（金叉、52 周新高、动量）被高估得越多，尤其是动量。"));
+  const lg = $("#hodl-legend");
+  for (const [cls, label] of [["w", "赢"], ["", "输"], ["b", "涨超 50% 的大赚"]]) {
+    const s = el("span"); s.append(el("i", { class: "sq " + cls }), document.createTextNode(label)); lg.append(s);
+  }
+})();
 
 // ---------- recommendations ----------
 function recCard(name) {
@@ -526,7 +676,7 @@ const notes = [
 ];
 for (const [k, v] of notes) { const li = el("li"); li.append(el("b", {}, k + "："), document.createTextNode(v)); $("#method").append(li); }
 
-function refresh() { drawScatter(); drawTable(); drawDetail(); }
+function refresh() { drawScatter(); drawTable(); drawDetail(); renderHodl(); }
 selected = [D.recommended[0] || rows.find((r) => r.trades)?.strategy];
 refresh();
 let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { drawScatter(); drawEquity(); drawYearly(byName[selected[selected.length - 1]]); }, 150); });

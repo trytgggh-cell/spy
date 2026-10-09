@@ -214,6 +214,25 @@ def build_strategies() -> list[Strategy]:
         score=lambda x: -x.v / x.vol_avg(20),
     ))
 
+    # wide trailing stops: fewer, bigger winners (low win rate, high payoff)
+    def wide(name, entry, k, desc):
+        S.append(Strategy(
+            name, TR, desc, entry, ExitRule(max_hold=3000, trail_atr=k), use_atr=True,
+            score=lambda x: -(x.c / x.sma(200)), params={"atr": k},
+        ))
+
+    wide("20日新高 | 5ATR追踪止损", lambda x: (x.c > x.hh(20)) & x.uptrend & x.liquid, 5.0,
+         "收盘创20日新高且在200日均线上方买入；最高收盘价-5倍ATR的吊灯止损离场（比海龟的3倍更宽）。")
+    wide("55日新高 | 6ATR追踪止损", lambda x: (x.c > x.hh(55)) & x.uptrend & x.liquid, 6.0,
+         "收盘创55日新高且在200日均线上方买入；最高收盘价-6倍ATR的吊灯止损离场。")
+    wide("52周新高 | 5ATR追踪止损", lambda x: (x.c > x.hc(252)) & x.liquid, 5.0,
+         "收盘创252日新高买入（不要求放量）；5倍ATR吊灯止损离场。")
+    wide("52周新高 | 8ATR追踪止损", lambda x: (x.c > x.hc(252)) & x.liquid, 8.0,
+         "收盘创252日新高买入；8倍ATR吊灯止损离场，让赢家尽量跑。")
+    wide("52周新高+放量 | 5ATR追踪止损",
+         lambda x: (x.c > x.hc(252)) & (x.v > 1.5 * x.vol_avg(20)) & x.liquid, 5.0,
+         "收盘创252日新高且成交量>1.5倍20日均量买入；5倍ATR吊灯止损离场。")
+
     # ---------------- patterns / events -----------------------------------------
     for g in (0.03, 0.05):
         S.append(Strategy(
