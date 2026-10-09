@@ -48,7 +48,9 @@ python -m pytest tests              # 引擎单元测试
 python -m backtest.run_v2 --universe etf      # 24 只 ETF：择时、趋势、双动量、行业轮动、超卖
 python -m backtest.run_v2 --universe market   # 全市场前 500：稳健股回调、月度轮动（需先 python -m backtest.market）
 ```
-结果在 `results/v2_etf/`、`results/v2_market/`，报告页面顶部可切换四套结果。
+结果在 `results/v2_etf/`、`results/v2_market/`。
+
+v3（QQQ 及合成杠杆的趋势和超卖打法，规则见 `docs/V3_PLAN.md`）：`python -m backtest.run_v3`，结果在 `results/v3/`。报告页面顶部可切换五套结果。
 
 ## 输出
 

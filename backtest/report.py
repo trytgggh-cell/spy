@@ -133,12 +133,13 @@ def build_data(res: Path, market: bool = False, label: str = "") -> dict | None:
 
 def build() -> Path:
     data = {
+        "v3": build_data(RES / "v3"),
         "v2_etf": build_data(RES / "v2_etf"),
         "v2_market": build_data(RES / "v2_market"),
         "market": build_data(RES / "market", market=True, label="旧打法 · 全市场前 500"),
         "index": build_data(RES, label="旧打法 · 今天的 S&P 500 + 纳指 100"),
     }
-    data["_order"] = [k for k in ("v2_etf", "v2_market", "market", "index") if data[k]]
+    data["_order"] = [k for k in ("v3", "v2_etf", "v2_market", "market", "index") if data[k]]
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "/*__DATA__*/null", json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     )

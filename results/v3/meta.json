@@ -1,0 +1,12 @@
+{
+  "universe": "QQQ 及其 2 倍、3 倍合成杠杆（日杠杆，扣融资和费用）",
+  "n_tickers": 1,
+  "start": "1999-03-10",
+  "end": "2026-10-08",
+  "oos_start": "2018-01-01",
+  "cost_per_side": 0.0005,
+  "max_positions": 1,
+  "top_n": null,
+  "baseline_win_rate": 0.5,
+  "generated": "2026-10-09 12:17"
+}

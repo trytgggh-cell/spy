@@ -351,7 +351,7 @@ function waffle(r) {
   return w;
 }
 function renderHodl() {
-  $("#hodl-intro").textContent = `每张卡片是一个打法，已扣成本。事件型打法最多同时持有 ${meta.max_positions} 只、每只占 1/${meta.max_positions}；月度轮动按 1/N 等权。曲线是账户价值（对数刻度），虚线是同期 SPY。下方的 100 个方块代表“每 100 笔交易”。`;
+  $("#hodl-intro").textContent = `每张卡片是一个打法，已扣成本。` + (meta.max_positions > 1 ? `事件型打法最多同时持有 ${meta.max_positions} 只、每只占 1/${meta.max_positions}；月度轮动按 1/N 等权。` : `只交易一个标的，不持有时拿现金（国债收益）。`) + `曲线是账户价值（对数刻度），虚线是同期 SPY。下方的 100 个方块代表“每 100 笔交易”。`;
   const chips = document.querySelectorAll("#hodl-range .chip");
   if (chips[0]) chips[0].textContent = "从 " + meta.start.slice(0, 4) + " 年起投";
   if (chips[1]) chips[1].textContent = "从 " + meta.oos_start.slice(0, 4) + " 年起投";
