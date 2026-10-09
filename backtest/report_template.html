@@ -301,7 +301,7 @@ function renderFindings() {
 // ---------- $10,000 cards ----------
 const HODL_GROUPS = [
   ["对照", "对照：直接买入持有", "不做任何交易，作为参照。"],
-  ["高胜率", "高胜率：在上升趋势里买短线急跌", "赢的次数多，但每笔赚得少，亏起来比赚得多。账户波动小。"],
+  ["高胜率", "高胜率：在上升趋势里买短线急跌", "赢的次数多，但每笔赚得少，亏起来比赚得多。"],
   ["大赚型", "大赚型：趋势突破 + 宽止损", "一半以上的交易是亏的，靠少数涨几倍的交易赚钱。持有几个月。"],
   ["动量", "动量轮动：每月换成过去涨得最猛的 10 只", "每月换仓一次。"],
 ];
@@ -351,6 +351,8 @@ function waffle(r) {
   return w;
 }
 function renderHodl() {
+  const chips = document.querySelectorAll("#hodl-range .chip");
+  if (chips[0]) chips[0].textContent = "从 " + meta.start.slice(0, 4) + " 年起投";
   $("#sec-hodl").hidden = !(D.curated && D.curated.length);
   $("#hodl-bias").replaceChildren(el("strong", {}, "先看这一条："), document.createTextNode(" " + (D.hodl_note || "这些是回测，股票池只含今天的成分股，过去被淘汰的公司不在里面。越依赖少数大赢家的打法（金叉、52 周新高、动量）被高估得越多，尤其是动量。")));
   const host = $("#hodl"); host.replaceChildren();
@@ -370,7 +372,7 @@ function renderHodl() {
       top.append(el("div", { class: "big" }, money(10000 * r[P + "final"])));
       const sub = el("div", { class: "sub" });
       const s1 = el("span"); s1.append(document.createTextNode("年化 "), el("b", {}, pct(r[P + "cagr"], 1))); sub.append(s1);
-      if (key !== "对照" && spyFinal) { const s2 = el("span"); const x = r[P + "final"] / spyFinal; s2.append(document.createTextNode("SPY 的 "), el("b", {}, x.toFixed(x < 10 ? 1 : 0) + " 倍")); sub.append(s2); }
+      if (key !== "对照" && spyFinal) { const s2 = el("span"); const x = r[P + "final"] / spyFinal; s2.append(document.createTextNode("SPY 的 "), el("b", {}, x.toFixed(x < 0.1 ? 2 : x < 10 ? 1 : 0) + " 倍")); sub.append(s2); }
       top.append(sub); card.append(top);
       const ch = el("div", { class: "chart" }); card.append(ch);
       sparkline(ch, c.name, HODL_COLOR[key], i0);

@@ -13,6 +13,8 @@ python -m pytest tests              # 引擎单元测试
 
 离线试跑（随机生成的价格，只用于验证流程）：`python -m backtest.run_all --synthetic`
 
+换一个不依赖指数名单的股票池：`python -m backtest.market`（下载全部当前仍上市的美股，约 12 分钟）后 `python -m backtest.run_all --universe market`，每个交易日只在成交额前 500 名（股价≥$5）里选股，结果放在 `results/market/`，报告页面可切换。
+
 常用参数：`--max-pos 10`（组合最多持仓数）、`--cost 0.0005`（单边成本）、`--refresh`（重新下载数据）。
 
 需要能访问 `query1.finance.yahoo.com` / `query2.finance.yahoo.com`（失败时回退 `stooq.com`）和 `raw.githubusercontent.com`（S&P 500 成分股列表）。

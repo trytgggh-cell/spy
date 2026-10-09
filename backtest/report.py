@@ -65,7 +65,15 @@ def _clean(v):
     return v
 
 
-def build_data(res: Path) -> dict | None:
+# Card notes that depend on how the stock pool was built
+MARKET_NOTES = {
+    "50/200均线金叉 | 死叉出场": "依赖少数大赢家；股票池不含已退市公司，收益仍偏高。",
+    "52周新高 | 8ATR追踪止损": "依赖少数大赢家；股票池不含已退市公司，收益仍偏高。",
+    "动量轮动 12个月动量 Top10": "股票池不含已退市公司，这个数字仍是上限。",
+}
+
+
+def build_data(res: Path, market: bool = False) -> dict | None:
     if not (res / "leaderboard.csv").exists():
         return None
     board = pd.read_csv(res / "leaderboard.csv")
@@ -96,8 +104,8 @@ def build_data(res: Path) -> dict | None:
         "dates": [d.strftime("%Y-%m-%d") for d in eq.index],
         "curves": curves,
         "recommended": pick_recommendations(board),
-        "curated": [{"group": g, "name": n, "note": note} for g, n, note in CURATED
-                    if n in set(board["strategy"])],
+        "curated": [{"group": g, "name": n, "note": (MARKET_NOTES.get(n, note) if market else note)}
+                    for g, n, note in CURATED if n in set(board["strategy"])],
         "findings": (json.loads((res / "findings.json").read_text(encoding="utf-8"))
                      if (res / "findings.json").exists() else []),
         **extra,
@@ -105,7 +113,7 @@ def build_data(res: Path) -> dict | None:
 
 
 def build() -> Path:
-    data = {"index": build_data(RES), "market": build_data(RES / "market")}
+    data = {"index": build_data(RES), "market": build_data(RES / "market", market=True)}
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "/*__DATA__*/null", json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     )
