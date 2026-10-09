@@ -40,6 +40,16 @@ python -m pytest tests              # 引擎单元测试
 - 2019-01-01 之前为样本内，之后为样本外
 - 组合模拟：最多 10 只，等权，按净值 1/N 开仓，每日按收盘价盯市
 
+## v2 新打法（规则先写、后跑）
+
+`docs/V2_PLAN.md` 在跑回测之前就写好了规则、变体和样本内外切分，结果无论好坏都公布。
+
+```bash
+python -m backtest.run_v2 --universe etf      # 24 只 ETF：择时、趋势、双动量、行业轮动、超卖
+python -m backtest.run_v2 --universe market   # 全市场前 500：稳健股回调、月度轮动（需先 python -m backtest.market）
+```
+结果在 `results/v2_etf/`、`results/v2_market/`，报告页面顶部可切换四套结果。
+
 ## 输出
 
 - `results/leaderboard.csv`：每个策略的胜率、平均收益、盈亏比、Profit Factor、样本内/外指标、组合年化/回撤/Sharpe、风险提示

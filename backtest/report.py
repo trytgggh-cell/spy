@@ -73,7 +73,15 @@ MARKET_NOTES = {
 }
 
 
-def build_data(res: Path, market: bool = False) -> dict | None:
+DEFAULT_GROUPS = [
+    ["对照", "对照：直接买入持有", "不做任何交易，作为参照。"],
+    ["高胜率", "高胜率：在上升趋势里买短线急跌", "赢的次数多，但每笔赚得少，亏起来比赚得多。"],
+    ["大赚型", "大赚型：趋势突破 + 宽止损", "一半以上的交易是亏的，靠少数涨几倍的交易赚钱。持有几个月。"],
+    ["动量", "动量轮动：每月换成过去涨得最猛的 10 只", "每月换仓一次。"],
+]
+
+
+def build_data(res: Path, market: bool = False, label: str = "") -> dict | None:
     if not (res / "leaderboard.csv").exists():
         return None
     board = pd.read_csv(res / "leaderboard.csv")
@@ -97,15 +105,26 @@ def build_data(res: Path, market: bool = False) -> dict | None:
     extra = {}
     if (res / "notes.json").exists():
         extra = json.loads((res / "notes.json").read_text(encoding="utf-8"))
+    disp = {}
+    if (res / "display.json").exists():
+        disp = json.loads((res / "display.json").read_text(encoding="utf-8"))
+    names = set(board["strategy"])
+    if "curated" in disp:
+        curated = [{"group": g, "name": n, "note": note} for g, n, note in disp["curated"] if n in names]
+    else:
+        curated = [{"group": g, "name": n, "note": (MARKET_NOTES.get(n, note) if market else note)}
+                   for g, n, note in CURATED if n in names]
     return {
+        "label": disp.get("label", label),
+        "default_sort": disp.get("default_sort"),
+        "hodl_groups": disp.get("hodl_groups", DEFAULT_GROUPS),
         "meta": meta,
         "rows": rows,
         "yearly": yd,
         "dates": [d.strftime("%Y-%m-%d") for d in eq.index],
         "curves": curves,
         "recommended": pick_recommendations(board),
-        "curated": [{"group": g, "name": n, "note": (MARKET_NOTES.get(n, note) if market else note)}
-                    for g, n, note in CURATED if n in set(board["strategy"])],
+        "curated": curated,
         "findings": (json.loads((res / "findings.json").read_text(encoding="utf-8"))
                      if (res / "findings.json").exists() else []),
         **extra,
@@ -113,7 +132,13 @@ def build_data(res: Path, market: bool = False) -> dict | None:
 
 
 def build() -> Path:
-    data = {"index": build_data(RES), "market": build_data(RES / "market", market=True)}
+    data = {
+        "v2_etf": build_data(RES / "v2_etf"),
+        "v2_market": build_data(RES / "v2_market"),
+        "market": build_data(RES / "market", market=True, label="旧打法 · 全市场前 500"),
+        "index": build_data(RES, label="旧打法 · 今天的 S&P 500 + 纳指 100"),
+    }
+    data["_order"] = [k for k in ("v2_etf", "v2_market", "market", "index") if data[k]]
     html = TEMPLATE.read_text(encoding="utf-8").replace(
         "/*__DATA__*/null", json.dumps(data, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     )

@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 
 from . import etf, market, metrics
-from .data import load_or_download
 from .engine import run_trades
 from .indicators import sma
 from .portfolio import score_rotation, signal_timing, simulate_slots
@@ -36,7 +35,7 @@ def main() -> None:
     (out / "trades").mkdir(parents=True, exist_ok=True)
     t0 = time.time()
 
-    idx = load_or_download([])
+    etf_px = etf.load_etf_panel().close          # SPY/QQQ from 2003-06 (benchmarks, market filter)
     if args.universe == "market":
         panel, uni = market.build_market_panel(500)
         label = "全市场当前仍上市的美股，每个时点取成交额前500名（不看指数成分）"
@@ -50,7 +49,7 @@ def main() -> None:
         events, rotations, timings, max_pos = ev, rot, tim, 5
     dates = panel.dates
     ctx = V2Ctx(panel, uni)
-    spy_full = idx.close["SPY"].reindex(dates).ffill()
+    spy_full = etf_px["SPY"].reindex(dates).ffill()
     spy_on = (spy_full > sma(spy_full.to_frame(), 200).iloc[:, 0]).fillna(False)
     meta = {"universe": label, "n_tickers": len(panel.tickers), "start": str(dates[0].date()),
             "end": str(dates[-1].date()), "oos_start": args.oos_start, "cost_per_side": args.cost,
@@ -90,8 +89,8 @@ def main() -> None:
         add(t.name, t.category, t.description, ep, eq)
 
     for b in ("SPY", "QQQ"):
-        px = idx.close[b].reindex(dates).ffill()
-        eq = px / px.dropna().iloc[0]
+        px = etf_px[b].reindex(dates).ffill()
+        eq = (px / px.dropna().iloc[0]).fillna(1.0)
         st = {**metrics.equity_stats(eq), **metrics.equity_stats(eq[eq.index >= metrics.OOS_START], "pf_oos_")}
         rows.append({"strategy": f"{b} 买入持有", "category": "基准", "description": f"{b} 买入持有（复权）。", **st})
         curves[f"{b} 买入持有"] = eq

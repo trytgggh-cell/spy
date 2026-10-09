@@ -186,7 +186,7 @@ tbody tr.dim td { color: var(--ink-3); }
   <section id="sec-hodl">
     <div class="sec-head">
       <h2>投 10,000 美元会怎样</h2>
-      <p>每张卡片是一个打法：每次最多同时持有 10 只，满仓等权，已扣成本。曲线是账户价值（对数刻度），虚线是同期 SPY。下方的 100 个方块代表“每 100 笔交易”。</p>
+      <p id="hodl-intro"></p>
     </div>
     <div class="filters" id="hodl-range"></div>
     <div class="notice warn" id="hodl-bias"></div>
@@ -250,7 +250,7 @@ tbody tr.dim td { color: var(--ink-3); }
 
 <script>
 const DATA = /*__DATA__*/null;
-let D = DATA.index;
+let D = DATA[DATA._order[0]];
 const $ = (s) => document.querySelector(s);
 const NS = "http://www.w3.org/2000/svg";
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -269,9 +269,9 @@ function useUniverse(key) {
   D = DATA[key]; meta = D.meta; base = meta.baseline_win_rate; rows = D.rows;
   byName = Object.fromEntries(rows.map((r) => [r.strategy, r]));
 }
-let universeKey = DATA.market ? "market" : "index";
+let universeKey = DATA._order[0];
 useUniverse(universeKey);
-const CAT_COLOR = { "均值回归": "--s1", "趋势突破": "--s2", "形态事件": "--s3" };
+const CAT_COLOR = { "均值回归": "--s1", "趋势突破": "--s2", "形态事件": "--s3", "稳健回调": "--s1", "月度轮动": "--s2", "ETF": "--s3", "动量轮动": "--s-other" };
 const catColor = (c) => css(CAT_COLOR[c] || "--s-other");
 const SEL_COLORS = ["--s1", "--s2", "--s3"];
 
@@ -351,15 +351,18 @@ function waffle(r) {
   return w;
 }
 function renderHodl() {
+  $("#hodl-intro").textContent = `每张卡片是一个打法，已扣成本。事件型打法最多同时持有 ${meta.max_positions} 只、每只占 1/${meta.max_positions}；月度轮动按 1/N 等权。曲线是账户价值（对数刻度），虚线是同期 SPY。下方的 100 个方块代表“每 100 笔交易”。`;
   const chips = document.querySelectorAll("#hodl-range .chip");
   if (chips[0]) chips[0].textContent = "从 " + meta.start.slice(0, 4) + " 年起投";
+  if (chips[1]) chips[1].textContent = "从 " + meta.oos_start.slice(0, 4) + " 年起投";
   $("#sec-hodl").hidden = !(D.curated && D.curated.length);
   $("#hodl-bias").replaceChildren(el("strong", {}, "先看这一条："), document.createTextNode(" " + (D.hodl_note || "这些是回测，股票池只含今天的成分股，过去被淘汰的公司不在里面。越依赖少数大赢家的打法（金叉、52 周新高、动量）被高估得越多，尤其是动量。")));
   const host = $("#hodl"); host.replaceChildren();
   const oos = hodlRange === "2019", P = oos ? "pf_oos_" : "pf_";
   const i0 = oos ? Math.max(0, D.dates.findIndex((d) => d >= meta.oos_start)) : 0;
   const spyFinal = byName["SPY 买入持有"]?.[P + "final"];
-  for (const [key, title, desc] of HODL_GROUPS) {
+  const GROUP_COLORS = ["--ink-2", "--s1", "--s2", "--s3"];
+  for (const [gi, [key, title, desc]] of (D.hodl_groups || HODL_GROUPS).entries()) {
     const items = (D.curated || []).filter((c) => c.group === key);
     if (!items.length) continue;
     const g = el("div", { class: "hodl-group" }); g.append(el("h3", {}, title), el("p", {}, desc));
@@ -372,10 +375,10 @@ function renderHodl() {
       top.append(el("div", { class: "big" }, money(10000 * r[P + "final"])));
       const sub = el("div", { class: "sub" });
       const s1 = el("span"); s1.append(document.createTextNode("年化 "), el("b", {}, pct(r[P + "cagr"], 1))); sub.append(s1);
-      if (key !== "对照" && spyFinal) { const s2 = el("span"); const x = r[P + "final"] / spyFinal; s2.append(document.createTextNode("SPY 的 "), el("b", {}, x.toFixed(x < 0.1 ? 2 : x < 10 ? 1 : 0) + " 倍")); sub.append(s2); }
+      if (gi > 0 && spyFinal) { const s2 = el("span"); const x = r[P + "final"] / spyFinal; s2.append(document.createTextNode("SPY 的 "), el("b", {}, x.toFixed(x < 0.1 ? 2 : x < 10 ? 1 : 0) + " 倍")); sub.append(s2); }
       top.append(sub); card.append(top);
       const ch = el("div", { class: "chart" }); card.append(ch);
-      sparkline(ch, c.name, HODL_COLOR[key], i0);
+      sparkline(ch, c.name, GROUP_COLORS[gi] || "--s3", i0);
       if (r.trades) {
         const row = el("div", { class: "waffle-row" }); row.append(waffle(r));
         const t = el("div", { class: "waffle-txt" });
@@ -425,6 +428,7 @@ function recCard(name) {
 }
 function renderRecs() {
   $("#recs").replaceChildren();
+  $("#sec-recs").hidden = !D.recommended.length;
   if (D.recommended.length) D.recommended.forEach((n) => $("#recs").append(recCard(n)));
   else $("#recs").append(el("div", { class: "empty" }, "没有策略同时满足全部条件。可以在排行榜里按样本外胜率排序，看哪些接近门槛。"));
 }
@@ -515,10 +519,12 @@ function drawScatter() {
   }
   box.append(svg);
   const lg = $("#scatter-legend"); lg.replaceChildren();
-  for (const [name, v] of [["均值回归", "--s1"], ["趋势突破", "--s2"], ["形态事件", "--s3"], ["动量轮动", "--s-other"]]) {
-    const s = el("span"); s.append(el("i", { style: `background:${css(v)}` }), document.createTextNode(name)); lg.append(s);
+  for (const name of [...new Set(rows.filter((r) => r.trades && !["基线", "基准"].includes(r.category)).map((r) => r.category))]) {
+    const s = el("span"); s.append(el("i", { style: `background:${catColor(name)}` }), document.createTextNode(name)); lg.append(s);
   }
-  const s = el("span"); s.append(el("i", { style: `border:2px solid ${css("--s-other")};width:10px;height:10px` }), document.createTextNode("随机基线")); lg.append(s);
+  if (rows.some((r) => r.category === "基线")) {
+    const s = el("span"); s.append(el("i", { style: `border:2px solid ${css("--s-other")};width:10px;height:10px` }), document.createTextNode("随机基线")); lg.append(s);
+  }
 }
 
 // ---------- table ----------
@@ -534,11 +540,14 @@ const COLS = [
 ];
 const SIGNED = new Set(["avg_ret", "oos_avg_ret", "pf_cagr", "edge_vs_random"]);
 let sortKey = "win_rate", sortDir = -1, catFilter = "全部";
-const cats = ["全部", ...new Set(rows.map((r) => r.category))];
-for (const c of cats) {
-  const b = el("button", { class: "chip", type: "button", "aria-pressed": String(c === catFilter) }, c);
-  b.addEventListener("click", () => { catFilter = c; document.querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); drawTable(); });
-  $("#filters").append(b);
+function renderFilters() {
+  const box = $("#filters"); box.replaceChildren();
+  catFilter = "全部"; sortKey = D.default_sort || "win_rate"; sortDir = -1;
+  for (const c of ["全部", ...new Set(rows.map((r) => r.category))]) {
+    const b = el("button", { class: "chip", type: "button", "aria-pressed": String(c === catFilter) }, c);
+    b.addEventListener("click", () => { catFilter = c; box.querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); drawTable(); });
+    box.append(b);
+  }
 }
 function drawTable() {
   const thead = $("#tbl thead"), tbody = $("#tbl tbody");
@@ -689,20 +698,20 @@ const notes = [
   ["组合模拟", `最多同时持有 ${meta.max_positions} 只，每只用当时净值的 1/${meta.max_positions} 买入；信号多于空位时，优先选超卖最深（或信号最强）的股票。`],
   ["样本内/外", `${meta.start} 至 ${meta.oos_start} 前为样本内，之后为样本外。规则在样本外依然有效，才说明不是巧合。`],
   ["随机基线", "随机挑股票买入并持有固定天数。美股长期上涨，随便买的胜率本身就超过 50%，好的打法必须明显高于这条线。"],
-  ["流动性过滤", meta.top_n ? `股票池不看指数成分：每个交易日，在全部当前仍上市的美股里，取股价 ≥ $5 且 20 日平均成交额排名前 ${meta.top_n} 的股票，入选前也能买。` : "只交易股价 ≥ $5 且 20 日平均成交额 ≥ 1000 万美元的股票。"],
+  ["流动性过滤", D.liquidity_note ? D.liquidity_note : meta.top_n ? `股票池不看指数成分：每个交易日，在全部当前仍上市的美股里，取股价 ≥ $5 且 20 日平均成交额排名前 ${meta.top_n} 的股票，入选前也能买。` : "只交易股价 ≥ $5 且 20 日平均成交额 ≥ 1000 万美元的股票。"],
   ["局限", D.limit_note || "使用当前成分股（幸存者偏差）；未计入做空、杠杆、分红再投资之外的现金利息；历史表现不代表未来。"],
 ];
 for (const [k, v] of notes) { const li = el("li"); li.append(el("b", {}, k + "："), document.createTextNode(v)); $("#method").append(li); }
 }
 
 function refresh() { drawScatter(); drawTable(); drawDetail(); renderHodl(); }
-function renderStatic() { renderHeader(); renderFindings(); renderRecs(); renderMethod(); }
+function renderStatic() { renderHeader(); renderFindings(); renderRecs(); renderMethod(); renderFilters(); }
 function defaultSelection() { return [D.recommended[0] || rows.find((r) => r.trades)?.strategy]; }
 (function initUniverseToggle() {
-  if (!DATA.market) return;
+  if (DATA._order.length < 2) return;
   const box = $("#univ-toggle"); box.hidden = false;
-  for (const [k, label] of [["market", "股票池：全市场成交额前 500（不看指数）"], ["index", "股票池：今天的 S&P 500 + 纳指 100"]]) {
-    const b = el("button", { class: "chip", type: "button", "aria-pressed": String(k === universeKey) }, label);
+  for (const k of DATA._order) {
+    const b = el("button", { class: "chip", type: "button", "aria-pressed": String(k === universeKey) }, DATA[k].label);
     b.addEventListener("click", () => {
       universeKey = k; useUniverse(k);
       box.querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
